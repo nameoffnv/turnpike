@@ -14,9 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/websocket"
-
 	"github.com/nu7hatch/gouuid"
+
+	"golang.org/x/net/websocket"
 )
 
 var (
@@ -94,6 +94,11 @@ func NewServer() *Server {
 	return s
 }
 
+// GetClients returns map of active sessions
+func (t *Server) GetClients() map[string]chan string {
+	return t.clients
+}
+
 // SetSessionOpenCallback adds a callback function that is run when a new session begins.
 // The callback function must accept a string argument that is the session ID.
 func (t *Server) SetSessionOpenCallback(f func(string)) {
@@ -145,6 +150,15 @@ func (t *Server) SendEvent(topic string, event interface{}) {
 	t.handlePublish(topic, publishMsg{
 		TopicURI: topic,
 		Event:    event,
+	})
+}
+
+// SendEventWithEligibleList sends an event for eligible list with topic directly
+func (t *Server) SendEventWithEligibleList(topic string, event interface{}, el []string) {
+	t.handlePublish(topic, publishMsg{
+		TopicURI:     topic,
+		Event:        event,
+		EligibleList: el,
 	})
 }
 
@@ -463,6 +477,7 @@ func (t *Server) handlePublish(id string, msg publishMsg) {
 		}
 
 		for _, tid := range msg.EligibleList {
+			sendTo = make([]string, 1) //quick fix
 			include := true
 			for _, _tid := range sendTo {
 				if _tid == tid {
